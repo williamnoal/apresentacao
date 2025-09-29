@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sopa Alfabética Interativa</title>
+    
+    <style>
+        /* CSS EMBUTIDO */
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            background-color: #f0f8ff; /* Azul céu clarinho */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        #game-container {
+            text-align: center;
+            background-color: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        h1 {
+            color: #e67e22; /* Laranja */
+            font-size: 2.5em;
+        }
+
+        #panela {
+            width: 500px;
+            height: 300px;
+            background: linear-gradient(to bottom, #f9e79f, #f7dc6f); /* Amarelo sopa */
+            border: 10px solid #c0392b; /* Vermelho panela */
+            border-radius: 20px 20px 150px 150px;
+            position: relative;
+            margin: 20px auto;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .letra {
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            border: 3px solid #3498db; /* Azul vibrante */
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #2980b9;
+            cursor: grab;
+            position: absolute;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        .letra:hover {
+            transform: scale(1.1);
+        }
+
+        #ordem-alfabetica {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 30px;
+            width: 90%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .espaco-letra {
+            width: 50px;
+            height: 50px;
+            background-color: #ecf0f1;
+            border: 2px dashed #95a5a6;
+            margin: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+            border-radius: 10px;
+        }
+
+        #instrucao {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: #2c3e50;
+            height: 50px;
+        }
+
+        #start-button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #2ecc71; /* Verde */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px #27ae60;
+            transition: all 0.1s ease-in-out;
+        }
+        
+        #start-button:active {
+            transform: translateY(5px);
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Sopa Alfabética</h1>
+        <div id="panela">
+            </div>
+        <div id="ordem-alfabetica">
+            </div>
+        <div id="instrucao">
+            <p>Arraste as letras para a ordem correta!</p>
+        </div>
+        <button id="start-button">Começar Jogo</button>
+    </div>
+
+    <script>
+        // JAVASCRIPT EMBUTIDO
+        document.addEventListener('DOMContentLoaded', () => {
+            const panela = document.getElementById('panela');
+            const ordemAlfabeticaContainer = document.getElementById('ordem-alfabetica');
+            const startButton = document.getElementById('start-button');
+            const instrucaoP = document.querySelector('#instrucao p');
+
+            const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            let letrasEmbaralhadas = [];
+            let proximaLetraCorretaIndex = 0;
+            let jogoIniciado = false;
+            
+            // API de Síntese de Voz do Navegador
+            const synth = window.speechSynthesis;
+            let vozes = [];
+
+            function carregarVozes() {
+                vozes = synth.getVoices().filter(voice => voice.lang.startsWith('pt'));
+            }
+            carregarVozes();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = carregarVozes;
+            }
+
+            startButton.addEventListener('click', iniciarJogo);
+
+            function iniciarJogo() {
+                if (jogoIniciado) return;
+                jogoIniciado = true;
+
+                proximaLetraCorretaIndex = 0;
+                panela.innerHTML = '';
+                ordemAlfabeticaContainer.innerHTML = '';
+                letrasEmbaralhadas = [...alfabeto].sort(() => Math.random() - 0.5);
+
+                letrasEmbaralhadas.forEach(letra => {
+                    const letraDiv = document.createElement('div');
+                    letraDiv.textContent = letra;
+                    letraDiv.classList.add('letra');
+                    letraDiv.id = `letra-${letra}`;
+                    letraDiv.setAttribute('draggable', true);
+                    
+                    // Garante que as letras não fiquem fora da panela
+                    const top = Math.random() * (panela.clientHeight - 60);
+                    const left = Math.random() * (panela.clientWidth - 60);
+                    letraDiv.style.top = `${top}px`;
+                    letraDiv.style.left = `${left}px`;
+                    
+                    panela.appendChild(letraDiv);
+
+                    letraDiv.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', letra);
+                        e.currentTarget.style.opacity = '0.5';
+                    });
+
+                    letraDiv.addEventListener('dragend', (e) => {
+                        e.currentTarget.style.opacity = '1';
+                    });
+                });
+
+                alfabeto.forEach(letra => {
+                    const espacoDiv = document.createElement('div');
+                    espacoDiv.classList.add('espaco-letra');
+                    espacoDiv.dataset.letra = letra;
+                    ordemAlfabeticaContainer.appendChild(espacoDiv);
+
+                    espacoDiv.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        espacoDiv.style.backgroundColor = '#d1f2eb';
+                    });
+
+                    espacoDiv.addEventListener('dragleave', (e) => {
+                        espacoDiv.style.backgroundColor = '#ecf0f1';
+                    });
+
+                    espacoDiv.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        espacoDiv.style.backgroundColor = '#ecf0f1';
+                        
+                        const letraArrastada = e.dataTransfer.getData('text/plain');
+                        const letraCorretaEsperada = alfabeto[proximaLetraCorretaIndex];
+                        
+                        if (letraArrastada === letraCorretaEsperada && espacoDiv.dataset.letra === letraCorretaEsperada) {
+                            espacoDiv.textContent = letraArrastada;
+                            espacoDiv.style.border = '2px solid #2ecc71'; // Borda verde para acerto
+                            
+                            const letraOriginal = document.getElementById(`letra-${letraArrastada}`);
+                            if (letraOriginal) {
+                                letraOriginal.style.display = 'none';
+                            }
+                            
+                            tocarSomLetra(letraArrastada);
+                            proximaLetraCorretaIndex++;
+                            
+                            if (proximaLetraCorretaIndex < alfabeto.length) {
+                                setTimeout(darInstrucao, 1000); // Dá um tempo para o som da letra tocar
+                            } else {
+                                instrucaoP.textContent = "Parabéns! Você completou o alfabeto!";
+                                falar("Uau! Parabéns! Você completou todo o alfabeto!");
+                                startButton.textContent = "Jogar Novamente";
+                                startButton.style.display = 'block';
+                                jogoIniciado = false;
+                            }
+                        } else {
+                            tocarSomErro();
+                            falar("Opa! Tente outra letra.");
+                        }
+                    });
+                });
+
+                darInstrucao();
+                startButton.style.display = 'none';
+            }
+
+            function darInstrucao() {
+                const proximaLetra = alfabeto[proximaLetraCorretaIndex];
+                const textoInstrucao = `Agora, coloque a letra ${proximaLetra}`;
+                instrucaoP.textContent = textoInstrucao;
+                falar(textoInstrucao);
+            }
+
+            function tocarSomLetra(letra) {
+                const audio = new Audio(`audio/${letra.toUpperCase()}.mp3`);
+                audio.play();
+            }
+
+            function tocarSomErro() {
+                const audio = new Audio(`audio/erro.mp3`);
+                audio.play();
+            }
+
+            function falar(texto) {
+                // Cancela qualquer fala anterior para não sobrepor
+                synth.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(texto);
+                utterance.lang = 'pt-BR';
+                // Tenta usar uma voz brasileira, se disponível
+                utterance.voice = vozes.length > 0 ? vozes[0] : null;
+                utterance.pitch = 1.2;
+                utterance.rate = 1.1;
+                synth.speak(utterance);
+            }
+        });
+    </script>
+</body>
+</html>
